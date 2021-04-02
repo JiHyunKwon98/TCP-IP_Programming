@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 	SOCKADDR_IN6 serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin6_family = AF_INET6;
-	serveraddr.sin6_addr.s_addr = htonl(INADDR_ANY);
+	serveraddr.sin6_addr = in6addr_any;
 	serveraddr.sin6_port = htons(SERVERPORT);
 	retval = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("bind()");
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 
 	//데이터 통신에 사용할 변수
 	SOCKET client_sock;
-	SOCKADDR_IN clientaddr;
+	SOCKADDR_IN6 clientaddr;
 	int addrlen;
 	char buf[BUFSIZE + 1];
 
@@ -74,8 +74,10 @@ int main(int argc, char* argv[])
 		}
 
 		//접속한 클라이언트 정보 출력
-		printf("\n [ TCP 서버 ] 클라이언트 접속 IP 주소=%s, 포트번호 = %d\n",
-			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+		char ipaddr[50];
+		DWORD ipaddrlen = sizeof(ipaddr);
+		WSAAddressToString((SOCKADDR*)&clientaddr, sizeof(clientaddr), NULL, ipaddr, &ipaddrlen);
+		printf("\n[TCP 서버]클라이언트 접속:%s\n",ipaddr);
 
 		//클라이언트와 데이터 통신
 		while (1) {
@@ -90,8 +92,7 @@ int main(int argc, char* argv[])
 
 			//받은 데이터 출력
 			buf[retval] = '\0';
-			printf("[TCP/%s:%d] %s\n", inet_ntoa(clientaddr.sin_addr),
-				ntohs(clientaddr.sin_port), buf);
+			printf("[TCP/%s:%d] %s\n", ipaddr, buf);
 
 			//데이터 보내기 
 			retval = send(client_sock, buf, retval, 0);
@@ -103,9 +104,8 @@ int main(int argc, char* argv[])
 
 		//closersocket()
 		closesocket(client_sock);
-		printf("[TCP 서버] 클라이언트 종료:IP 주소 = %s, 포트번호 =%d\n",
-			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-
+		printf("[TCP 서버] 클라이언트 종료: %s\n", ipaddr);
+		
 	}
 
 	//closesocket()
@@ -116,4 +116,3 @@ int main(int argc, char* argv[])
 	return 0;
 
 }
-
